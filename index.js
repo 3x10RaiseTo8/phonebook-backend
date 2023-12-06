@@ -18,10 +18,12 @@ app.use(
   morgan(":method :url :status :res[content-length] - :response-time ms :body")
 );
 
+// Get all the people in phonebook
 app.get("/api/persons", (request, response) => {
   Person.find({}).then((people) => response.json(people));
 });
 
+// Get total number of people in phonebook
 app.get("/info", (request, response) => {
   const count = Person.estimatedDocumentCount({}).then((result) =>
     response.send(
@@ -30,21 +32,28 @@ app.get("/info", (request, response) => {
   );
 });
 
-app.get("/api/persons/:id", (request, response) => {
-  const person = persons.find((p) => p.id === Number(request.params.id));
-  if (person) {
-    response.json(person);
-  } else {
-    response.status(404).end();
-  }
-  Person.findById(request.params.id).then((people) => response.json(people));
+// Get a single person
+app.get("/api/persons/:id", (request, response, next) => {
+  Person.findById(request.params.id)
+    .then((person) => {
+      if (person) {
+        response.json(people);
+      } else {
+        response.status(404).end();
+      }
+    })
+    .catch((error) => next(error));
 });
 
-app.delete("/api/persons/:id", (request, response) => {
-  Person.findByIdAndDelete(request.params.id).then(response.status(204).end());
+// Delete a person from the phonebook by id
+app.delete("/api/persons/:id", (request, response, next) => {
+  Person.findByIdAndDelete(request.params.id)
+    .then((result) => response.status(204).end())
+    .catch((error) => next(error));
 });
 
-app.post("/api/persons", (request, response) => {
+// Post a new person to the phonebook
+app.post("/api/persons", (request, response, next) => {
   const body = request.body;
 
   if (!body.number || !body.name) {
@@ -56,10 +65,46 @@ app.post("/api/persons", (request, response) => {
     number: body.number,
   });
 
-  person.save().then((savedPerson) => response.json(savedPerson));
+  person
+    .save()
+    .then((savedPerson) => response.json(savedPerson))
+    .catch((error) => next(error));
 });
 
+// Puts new phone number to existing person name
+app.put("/api/persons/:id", (request, response, next) => {
+  const body = request.body;
+
+  const person = {
+    name: body.name,
+    number: body.number,
+  };
+
+  Person.findByIdAndUpdate(request.params.id, person, { new: true })
+    .then((updatedPerson) => response.json(updatedPerson))
+    .catch((error) => next(error));
+});
+
+// Handles requests to unknown endpoints
+const unknownEndpoint = (request, response) => {
+  response.status(404).send({ error: "Unknown Endpoint" });
+};
+
+app.use(unknownEndpoint);
+
+// Handles request which results in error
+const errorHandler = (error, request, response, next) => {
+  console.log(error);
+  if (error.name === "CastError") {
+    return response.status(400).send({ error: "Malformatted ID" });
+  }
+  next(error);
+};
+
+app.use(errorHandler);
+
 const PORT = process.env.PORT || 3001;
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
