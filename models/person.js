@@ -11,13 +11,25 @@ mongoose
   .then((result) => console.log("Connected to the database", uri.slice(0, 7)))
   .catch((error) => console.log("Connection failed", error));
 
+const phoneNumberValidation = [
+  {
+    validator: (num) =>
+      /^[0-9]{2}-[0-9]{6,}$/.test(num) || /^[0-9]{3}-[0-9]{5,}$/.test(num),
+    message:
+      "Invalid number format: eg, 09-1234556 and 040-22334455 are valid phone numbers",
+  },
+];
+
 const personSchema = new mongoose.Schema({
   name: {
     type: String,
     minLength: 3,
     required: true,
   },
-  number: String,
+  number: {
+    type: String,
+    validate: phoneNumberValidation,
+  },
 });
 
 personSchema.set("toJSON", {
