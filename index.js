@@ -1,31 +1,29 @@
-require("dotenv").config();
+require('dotenv').config();
 
-const express = require("express");
-const morgan = require("morgan");
-const cors = require("cors");
-const Person = require("./models/person");
+const express = require('express');
+const morgan = require('morgan');
+const cors = require('cors');
+const Person = require('./models/person');
 
 const app = express();
 
-morgan.token("body", function (req) {
-  return JSON.stringify(req.body);
-});
+morgan.token('body', (req) => JSON.stringify(req.body));
 
-app.use(express.static("dist"));
+app.use(express.static('dist'));
 app.use(cors());
 app.use(express.json());
 app.use(
-  morgan(":method :url :status :res[content-length] - :response-time ms :body")
+  morgan(':method :url :status :res[content-length] - :response-time ms :body')
 );
 
 // Get all the people in phonebook
-app.get("/api/persons", (request, response) => {
+app.get('/api/persons', (request, response) => {
   Person.find({}).then((people) => response.json(people));
 });
 
 // Get total number of people in phonebook
-app.get("/info", (request, response) => {
-  const count = Person.estimatedDocumentCount({}).then((result) =>
+app.get('/info', (request, response) => {
+  Person.estimatedDocumentCount({}).then((result) =>
     response.send(
       `<p>Phonebook has info of ${result} people</p><p>${Date()}</p>`
     )
@@ -33,7 +31,7 @@ app.get("/info", (request, response) => {
 });
 
 // Get a single person
-app.get("/api/persons/:id", (request, response, next) => {
+app.get('/api/persons/:id', (request, response, next) => {
   Person.findById(request.params.id)
     .then((person) => {
       if (person) {
@@ -46,18 +44,18 @@ app.get("/api/persons/:id", (request, response, next) => {
 });
 
 // Delete a person from the phonebook by id
-app.delete("/api/persons/:id", (request, response, next) => {
+app.delete('/api/persons/:id', (request, response, next) => {
   Person.findByIdAndDelete(request.params.id)
-    .then((result) => response.status(204).end())
+    .then(response.status(204).end())
     .catch((error) => next(error));
 });
 
 // Post a new person to the phonebook
-app.post("/api/persons", (request, response, next) => {
-  const body = request.body;
+app.post('/api/persons', (request, response, next) => {
+  const { body } = request;
 
   if (!body.number || !body.name) {
-    return response.status(400).json({ error: "Name or Number missing" });
+    return response.status(400).json({ error: 'Name or Number missing' });
   }
 
   const person = new Person({
@@ -72,7 +70,7 @@ app.post("/api/persons", (request, response, next) => {
 });
 
 // Puts new phone number to existing person name
-app.put("/api/persons/:id", (request, response, next) => {
+app.put('/api/persons/:id', (request, response, next) => {
   const { name, number } = request.body;
 
   Person.findByIdAndUpdate(
@@ -81,7 +79,7 @@ app.put("/api/persons/:id", (request, response, next) => {
     {
       new: true,
       runValidators: true,
-      context: "query",
+      context: 'query',
     }
   )
     .then((updatedPerson) => response.json(updatedPerson))
@@ -90,7 +88,7 @@ app.put("/api/persons/:id", (request, response, next) => {
 
 // Handles requests to unknown endpoints
 const unknownEndpoint = (request, response) => {
-  response.status(404).send({ error: "Unknown Endpoint" });
+  response.status(404).send({ error: 'Unknown Endpoint' });
 };
 
 app.use(unknownEndpoint);
@@ -98,9 +96,10 @@ app.use(unknownEndpoint);
 // Handles request which results in error
 const errorHandler = (error, request, response, next) => {
   console.log(error);
-  if (error.name === "CastError") {
-    return response.status(400).send({ error: "Malformatted ID" });
-  } else if (error.name === "ValidationError") {
+  if (error.name === 'CastError') {
+    return response.status(400).send({ error: 'Malformatted ID' });
+  }
+  if (error.name === 'ValidationError') {
     return response.status(400).json({ error: error.message });
   }
   next(error);
